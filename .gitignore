@@ -1,0 +1,14 @@
+__pycache__/
+.ipynb_checkpoints/
+.vscode/
+
+env/
+build/
+eggs/
+.eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+
+snippets.txt
+tags
