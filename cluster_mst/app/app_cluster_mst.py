@@ -217,9 +217,8 @@ w_cmap = pnw.Select(
 
 print("Starting...")
 app = pn.template.FastListTemplate(
-    site="COMAS Datavis",
+    site="Datavis",
     title=title,
-    favicon="static/comas_icon.png",
     theme_toggle=False,
     sidebar=[
         pn.pane.Markdown("### Upload file with structures and activity data."),
