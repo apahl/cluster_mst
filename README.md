@@ -23,6 +23,9 @@ The points in the plot can be selected using the lasso tool, and the selected co
 Screenshot of the app with an MST generated from a random selection of ~1500 Aurora Kinase A inhibitors, downloaded from [ZINC](https://zinc.docking.org/genes/AURKA/observations/)  
 ![MST AURKA](res/cluster_mst_1.png)  
 
+When you hover over a point in the plot, the structure is displayed as tooltip, together with the Identifier and the Activitiy value:  
+![Tooltip](res/cluster_mst_3.png)
+
 Selecting points with the lasso tool shows the selected compounds in a downloadable table:  
 ![Selection](res/cluster_mst_2.png)
 
