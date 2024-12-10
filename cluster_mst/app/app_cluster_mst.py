@@ -74,11 +74,11 @@ def struct_hover(id_col, cols):
 def show_result(event=None):    
     def update_table(index):
         selected_df = mst.df.iloc[index].copy()
-        result[1] = pn.pane.DataFrame(selected_df[columns], escape=False, index=False, max_width=500)
+        result[2] = pn.pane.DataFrame(selected_df[columns], escape=False, index=False, max_width=500)
         sio = StringIO()
         selected_df[dl_columns].to_csv(sio, sep="\t", index=False)
         sio.seek(0)
-        result[2] = pnw.FileDownload(sio, embed=True, filename='selection.tsv')
+        result[3] = pnw.FileDownload(sio, embed=True, filename='selection.tsv')
 
 
     print("In function")
@@ -151,7 +151,7 @@ def show_result(event=None):
     colorby = mst.act_col
     kdims = ["X", "Y"]
     vdims = [mst.id_col, "Image", colorby]
-    df = df.sort_values(colorby, ascending=mst.reverse)
+    mst.df = mst.df.sort_values(colorby, ascending=mst.reverse)
     scatter = hv.Points(data=mst.df, kdims=kdims, vdims=vdims)  # , label=title)
     plot_options["color"] = colorby
     plot_options["cmap"] = w_cmap.value
@@ -162,8 +162,19 @@ def show_result(event=None):
     # chart = (hv.Path(edges).options(color="black") * scatter.options(**plot_options))
     chart = hv.Path(edges).opts(color="black") * scatter.opts(**plot_options)
 
+
+    dsio = StringIO()
+    ds_4_dl = mst.df.drop(columns=["X", "Y", "Image"]).copy()
+    ds_4_dl.to_csv(dsio, sep="\t", index=False)
+    dsio.seek(0)
+    w_ds_dl = pnw.FileDownload(
+        dsio, embed=True, filename='dataset.tsv',
+        label="Download full dataset"
+    )
+
     result = pn.Column(
         chart,
+        w_ds_dl,
         pn.pane.Markdown("Select points in the chart using the lasso select tool."),
         pn.pane.Markdown(""),
     )
@@ -213,6 +224,7 @@ w_cmap = pnw.Select(
     value="brg",
     description="Color map for the plot."
 )
+
 
 
 print("Starting...")
