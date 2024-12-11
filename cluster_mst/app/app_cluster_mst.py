@@ -142,7 +142,7 @@ def show_result(event=None):
     plot_options = {
         "width": 1200,
         "height": 800,
-        "tools": [hover, "lasso_select"],
+        "tools": [hover, "lasso_select", "save"],
         "legend_position": "right",
         "toolbar": "right",
         "size": 12,
@@ -161,8 +161,7 @@ def show_result(event=None):
     
     # chart = (hv.Path(edges).options(color="black") * scatter.options(**plot_options))
     chart = hv.Path(edges).opts(color="black") * scatter.opts(**plot_options)
-
-
+    
     dsio = StringIO()
     ds_4_dl = mst.df.drop(columns=["X", "Y", "Image"]).copy()
     ds_4_dl.to_csv(dsio, sep="\t", index=False)
@@ -174,7 +173,7 @@ def show_result(event=None):
 
     result = pn.Column(
         chart,
-        w_ds_dl,
+    	w_ds_dl,
         pn.pane.Markdown("Select points in the chart using the lasso select tool."),
         pn.pane.Markdown(""),
     )
