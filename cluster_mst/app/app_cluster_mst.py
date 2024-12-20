@@ -74,7 +74,7 @@ def struct_hover(id_col, cols):
 def show_result(event=None):    
     def update_table(index):
         selected_df = mst.df.iloc[index].copy()
-        result[2] = pn.pane.DataFrame(selected_df[columns], escape=False, index=False, max_width=500)
+        result[2] = pn.pane.DataFrame(selected_df[sel_columns], escape=False, index=False, max_width=1100)
         sio = StringIO()
         selected_df[dl_columns].to_csv(sio, sep="\t", index=False)
         sio.seek(0)
@@ -87,7 +87,8 @@ def show_result(event=None):
         return pn.pane.Markdown(HELP_TEXT + "\n\nPlease upload a file.")
     df = pd.read_csv(BytesIO(w_file_input.value), sep="\t")
     print(len(df))
-    avail_cols = ", ".join(df.columns.tolist())
+    dl_columns = df.columns.tolist()    
+    avail_cols = ", ".join(dl_columns)
     if w_id_col.value not in df.columns:
         return pn.pane.Markdown(
             (
@@ -123,8 +124,21 @@ def show_result(event=None):
         return pn.pane.Markdown(
             HELP_TEXT + "\n\nERROR: Similarity cutoff must be between 0.2 and 0.9."
         )
+    if w_manual_cmap.value != "":
+        tmp = [x.strip() for x in w_manual_cmap.value.split(",")]
+        cmap = []
+        for x in tmp:
+            if not x.startswith("#"):
+                x = "#" + x
+            if len(x) != 7:
+                return pn.pane.Markdown(
+                    HELP_TEXT + f"\n\nERROR: Color value {x} does not match the HTML format (6 digits plus an optional leading '#')."
+                )
+            cmap.append(x)
+        # print("Using manual color map:", cmap)
+    else:
+        cmap = w_cmap.value
     
-    dl_columns = df.columns.tolist()    
     mst = cmst.ClusterMST(
         df, id_col=w_id_col.value, act_col=w_act_col.value, 
         top_n_act=w_top_n_act.value, num_sim=w_num_sim.value, 
@@ -133,7 +147,12 @@ def show_result(event=None):
     ) 
     mst.calc_mst()
     mst.df = u.calc_from_smiles(mst.df, "Image", mol_image_tag, smiles_col="Smiles")
-    columns = ["Image", mst.id_col, mst.act_col]
+    
+    # Used for the display of selected table (the save action always saves all columns):
+    sel_columns = ["Image", mst.id_col, mst.act_col]
+    excl_from_display = set(sel_columns + ["InChIKey", "Smiles", "X", "Y"])
+    additional_columns = [x for x in mst.df.columns if x not in excl_from_display]
+    sel_columns.extend(additional_columns)
 
     tooltip = [mst.act_col]
     edges = [[(x1, y1), (x2, y2)] for (x1, y1, x2, y2) in mst.edges.to_records(index=False)]
@@ -154,7 +173,7 @@ def show_result(event=None):
     mst.df = mst.df.sort_values(colorby, ascending=mst.reverse)
     scatter = hv.Points(data=mst.df, kdims=kdims, vdims=vdims)  # , label=title)
     plot_options["color"] = colorby
-    plot_options["cmap"] = w_cmap.value
+    plot_options["cmap"] = cmap
     
     selection = Selection1D(source=scatter)
     selection.param.watch(lambda event: update_table(event.new), 'index')
@@ -219,9 +238,18 @@ w_fp_method = pnw.Select(
 )
 w_cmap = pnw.Select(
     name="Color map",
-    options=["brg", "bmy", "viridis", "plasma", "magma", "turbo"],
+    options=[
+        "brg", "bmy", "viridis", "plasma", "magma", "turbo", "gist_rainbow",
+        "colorblind", "category10", "dark2", "set1", "tab10", "tab20",
+        # manual cmaps:
+        "four"
+    ],
     value="brg",
     description="Color map for the plot."
+)
+w_manual_cmap = pnw.TextInput(
+    name="Manual colormap (optional, comma-separated)",
+    description="Instead of using a pre-defined colormap, you can give a list of comma-separated HTML color codes, here."
 )
 
 
@@ -242,6 +270,7 @@ app = pn.template.FastListTemplate(
         w_sim_cutoff,
         w_fp_method,
         w_cmap,
+        w_manual_cmap,
         
         button
     ],
