@@ -74,6 +74,7 @@ def struct_hover(id_col, cols):
 def show_result(event=None):    
     def update_table(index):
         selected_df = mst.df.iloc[index].copy()
+        selected_df = u.replace_nans(selected_df, sel_columns, "")
         result[2] = pn.pane.DataFrame(selected_df[sel_columns], escape=False, index=False, max_width=1100)
         sio = StringIO()
         selected_df[dl_columns].to_csv(sio, sep="\t", index=False)
