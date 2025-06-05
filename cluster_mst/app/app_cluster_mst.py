@@ -75,7 +75,7 @@ def show_result(event=None):
     def update_table(index):
         selected_df = mst.df.iloc[index].copy()
         selected_df = u.replace_nans(selected_df, sel_columns, "")
-        result[2] = pn.pane.DataFrame(selected_df[sel_columns], escape=False, index=False, max_width=1100)
+        result[2] = pn.pane.DataFrame(selected_df[sel_columns], escape=False, index=False, max_width=1200)
         sio = StringIO()
         selected_df[dl_columns].to_csv(sio, sep="\t", index=False)
         sio.seek(0)
@@ -84,6 +84,7 @@ def show_result(event=None):
 
     print("In function")
     print(w_file_input.filename)
+    avail_cmaps = list(hv.plotting.list_cmaps())
     if w_file_input.filename is None:
         return pn.pane.Markdown(HELP_TEXT + "\n\nPlease upload a file.")
     df = pd.read_csv(BytesIO(w_file_input.value), sep="\t")
@@ -127,15 +128,23 @@ def show_result(event=None):
         )
     if w_manual_cmap.value != "":
         tmp = [x.strip() for x in w_manual_cmap.value.split(",")]
-        cmap = []
-        for x in tmp:
-            if not x.startswith("#"):
-                x = "#" + x
-            if len(x) != 7:
+        if len(tmp) == 1:  # Interpret as Matplotlib colormap name
+            if tmp[0] not in avail_cmaps:
                 return pn.pane.Markdown(
-                    HELP_TEXT + f"\n\nERROR: Color value {x} does not match the HTML format (6 digits plus an optional leading '#')."
+                    HELP_TEXT + f"\n\nERROR: Color map {tmp[0]} not found. Available color maps: {', '.join(avail_cmaps)}."
                 )
-            cmap.append(x)
+            print("Using colormap:", tmp[0])
+            cmap = tmp[0]
+        else:  # Interpret as list of HTML color codes
+            cmap = []
+            for x in tmp:
+                if not x.startswith("#"):
+                    x = "#" + x
+                if len(x) != 7:
+                    return pn.pane.Markdown(
+                        HELP_TEXT + f"\n\nERROR: Color value {x} does not match the HTML format (6 digits plus an optional leading '#')."
+                    )
+                cmap.append(x)
         # print("Using manual color map:", cmap)
     else:
         cmap = w_cmap.value
@@ -156,7 +165,7 @@ def show_result(event=None):
     sel_columns.extend(additional_columns)
 
     tooltip = [mst.act_col]
-    edges = [[(x1, y1), (x2, y2)] for (x1, y1, x2, y2) in mst.edges.to_records(index=False)]
+    edges = [[(x1, y1), (x2, y2)] for (_, _, x1, y1, x2, y2) in mst.edges.to_records(index=False)]
 
     hover = struct_hover(mst.id_col, cols=tooltip)
     plot_options = {
@@ -191,9 +200,27 @@ def show_result(event=None):
         label="Download full dataset"
     )
 
+    dswimgio = StringIO()
+    ds_4_dl_w_img = mst.df.drop(columns=["Image"]).copy()
+    ds_4_dl_w_img.to_csv(dswimgio, sep="\t", index=False)
+    dswimgio.seek(0)
+    w_ds_w_img_dl = pnw.FileDownload(
+        dswimgio, embed=True, filename='dataset_w_img.tsv',
+        label="Download full dataset with coordinates"
+    )
+
+    edgesio = StringIO()
+    edges_4_dl = mst.edges.copy()
+    edges_4_dl.to_csv(edgesio, sep="\t", index=False)
+    edgesio.seek(0)
+    w_edges_dl = pnw.FileDownload(
+        edgesio, embed=True, filename='edges.tsv',
+        label="Download edges for full dataset"
+    )
+
     result = pn.Column(
         chart,
-    	w_ds_dl,
+    	pn.Row(w_ds_dl, w_ds_w_img_dl, w_edges_dl),
         pn.pane.Markdown("Select points in the chart using the lasso select tool."),
         pn.pane.Markdown(""),
     )
@@ -243,14 +270,14 @@ w_cmap = pnw.Select(
         "brg", "bmy", "viridis", "plasma", "magma", "turbo", "gist_rainbow",
         "colorblind", "category10", "dark2", "set1", "tab10", "tab20",
         # manual cmaps:
-        "four"
+        # "four"
     ],
     value="brg",
     description="Color map for the plot."
 )
 w_manual_cmap = pnw.TextInput(
     name="Manual colormap (optional, comma-separated)",
-    description="Instead of using a pre-defined colormap, you can give a list of comma-separated HTML color codes, here."
+    description="Instead of using a pre-defined colormap, you can either give a list of comma-separated HTML color codes, here or the name of a holoviews colormap."
 )
 
 
