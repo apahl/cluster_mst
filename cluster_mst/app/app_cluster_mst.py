@@ -24,7 +24,7 @@ HELP_TEXT = """
 # Cluster MST
 
 This app takes a file containing structures as Smiles and activity data, and generates a clustering of the structures, represented as Minimum Spanning Tree (MST).
-The input file has to be a &lt;tab&gt;-separated TSV file and contain at least three columns: &lt;Identifier&gt; (default: Compound_Id), &lt;Activity&gt; (check the "Reverse" box if lower values are better, e.g. for "Activity"), and "Smiles" for the structures.
+The input file has to be a &lt;tab&gt;-separated TSV file and contain at least three columns: &lt;Identifier&gt; (default: Compound_Id), &lt;Activity&gt; (check the "Reverse" box if lower values are better, e.g. for "Activity"), and "Smiles" for the structures. The column headers should not contain spaces.
 The tool takes the top N active compounds ("Top N active", default: 50) and adds the most similar compounds for each of these ("Number of similar compounds", default: 10), downto a minimum similarity cutoff ("Similarity cutoff", default: 0.6) using the chosen fingerprint method, then generates the MST.
 
 Generally, only linear-scaled values should be used for Activity, e.g. percentages. IC50 values should be converted to pIC50.
@@ -205,7 +205,7 @@ def show_result(event=None):
     ds_4_dl_w_img.to_csv(dswimgio, sep="\t", index=False)
     dswimgio.seek(0)
     w_ds_w_img_dl = pnw.FileDownload(
-        dswimgio, embed=True, filename='dataset_w_img.tsv',
+        dswimgio, embed=True, filename='dataset_w_coord.tsv',
         label="Download full dataset with coordinates"
     )
 
