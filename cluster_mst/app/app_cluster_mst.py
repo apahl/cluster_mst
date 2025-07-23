@@ -23,8 +23,8 @@ pn.extension()
 HELP_TEXT = """
 # Cluster MST
 
-This app takes a file containing structures as Smiles and activity data, and generates a clustering of the structures, represented as Minimum Spanning Tree (MST).
-The input file has to be a &lt;tab&gt;-separated TSV file and contain at least three columns: &lt;Identifier&gt; (default: Compound_Id), &lt;Activity&gt; (check the "Reverse" box if lower values are better, e.g. for "Activity"), and "Smiles" for the structures. The column headers should not contain spaces.
+This app takes a file containing structures as Smiles and activity data, and generates a clustering of the structures, represented as Minimum Spanning Tree (MST).  
+The input file has to be a &lt;tab&gt;-separated TSV file and contain at least three columns: &lt;Identifier&gt; (default: Compound_Id), &lt;Activity&gt; (check the "Reverse" box if lower values are better, e.g. for "Activity"), and "Smiles" for the structures. The column headers should not contain spaces, or any special characters (like ",%()[]{}").  
 The tool takes the top N active compounds ("Top N active", default: 50) and adds the most similar compounds for each of these ("Number of similar compounds", default: 10), downto a minimum similarity cutoff ("Similarity cutoff", default: 0.6) using the chosen fingerprint method, then generates the MST.
 
 Generally, only linear-scaled values should be used for Activity, e.g. percentages. IC50 values should be converted to pIC50.
@@ -94,44 +94,44 @@ def show_result(event=None):
     if w_id_col.value not in df.columns:
         return pn.pane.Markdown(
             (
-                HELP_TEXT + f"\n\nERROR: Identifier column {w_id_col.value} not found in the file."
+                HELP_TEXT + f"\n\n**ERROR:** Identifier column {w_id_col.value} not found in the file."
                 + f"\n\nAvailable columns: \n{avail_cols}"
             )
         )
     if w_act_col.value not in df.columns:
         return pn.pane.Markdown(
             (
-                HELP_TEXT + f"\n\nERROR: Activity column {w_act_col.value} not found in the file."
+                HELP_TEXT + f"\n\n**ERROR:** Activity column {w_act_col.value} not found in the file."
                 + f"\n\nAvailable columns: \n{avail_cols}"
             )
         )
     if "Smiles" not in df.columns:
         return pn.pane.Markdown(
             (
-                HELP_TEXT + "\n\nERROR: Smiles column not found in the file."
+                HELP_TEXT + "\n\n**ERROR:** Smiles column not found in the file."
                 + f"\n\nAvailable columns: \n{avail_cols}"
             )
         )
     if w_top_n_act.value < 1:
         return pn.pane.Markdown(
-            HELP_TEXT + "\n\nERROR: Top N active must be at least 1."
+            HELP_TEXT + "\n\n**ERROR:** Top N active must be at least 1."
         )
     if w_top_n_act.value > len(df):
         w_top_n_act.value = len(df)
     if w_num_sim.value < 0:
         return pn.pane.Markdown(
-            HELP_TEXT + "\n\nERROR: Number of similar compounds must be at least 0."
+            HELP_TEXT + "\n\n**ERROR:** Number of similar compounds must be at least 0."
         )
     if w_sim_cutoff.value < 0.2 or w_sim_cutoff.value > 0.9:
         return pn.pane.Markdown(
-            HELP_TEXT + "\n\nERROR: Similarity cutoff must be between 0.2 and 0.9."
+            HELP_TEXT + "\n\n**ERROR:** Similarity cutoff must be between 0.2 and 0.9."
         )
     if w_manual_cmap.value != "":
         tmp = [x.strip() for x in w_manual_cmap.value.split(",")]
         if len(tmp) == 1:  # Interpret as Matplotlib colormap name
             if tmp[0] not in avail_cmaps:
                 return pn.pane.Markdown(
-                    HELP_TEXT + f"\n\nERROR: Color map {tmp[0]} not found. Available color maps: {', '.join(avail_cmaps)}."
+                    HELP_TEXT + f"\n\n**ERROR:** Color map {tmp[0]} not found. Available color maps: {', '.join(avail_cmaps)}."
                 )
             print("Using colormap:", tmp[0])
             cmap = tmp[0]
@@ -142,7 +142,7 @@ def show_result(event=None):
                     x = "#" + x
                 if len(x) != 7:
                     return pn.pane.Markdown(
-                        HELP_TEXT + f"\n\nERROR: Color value {x} does not match the HTML format (6 digits plus an optional leading '#')."
+                        HELP_TEXT + f"\n\n**ERROR:** Color value {x} does not match the HTML format (6 digits plus an optional leading '#')."
                     )
                 cmap.append(x)
         # print("Using manual color map:", cmap)
@@ -154,8 +154,13 @@ def show_result(event=None):
         top_n_act=w_top_n_act.value, num_sim=w_num_sim.value, 
         reverse=w_reverse.value, sim_cutoff=w_sim_cutoff.value,
         fp=w_fp_method.value
-    ) 
-    mst.calc_mst()
+    )
+    try: 
+        mst.calc_mst()
+    except Exception as e:
+        return pn.pane.Markdown(
+            HELP_TEXT + f"\n\n**ERROR:** {str(e)}"
+        )
     mst.df = u.calc_from_smiles(mst.df, "Image", mol_image_tag, smiles_col="Smiles")
     
     # Used for the display of selected table (the save action always saves all columns):
