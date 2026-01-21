@@ -4,11 +4,13 @@ from io import StringIO
 from io import BytesIO
 
 import pandas as pd
+
 # import numpy as np
 
 # import altair as alt
 import holoviews as hv
 from holoviews.streams import Selection1D
+
 hv.extension("bokeh")
 from bokeh.models import HoverTool
 
@@ -33,9 +35,14 @@ The points in the plot can be selected using the lasso tool, and the selected co
 
 button = pnw.Button(name="Start Calculation", button_type="primary", disabled=False)
 
+
 def mol_image_tag(mol):
     mol_tag = mv.MolImage(mol, svg=False, size=250).tag  # options='width="70%"'
     return mol_tag
+
+
+def mol_b64(mol):
+    return mv.MolImage(mol, svg=False, size=250).b64
 
 
 def struct_hover(id_col, cols):
@@ -55,10 +62,11 @@ def struct_hover(id_col, cols):
     add_cols_txt = "\n".join(add_cols)
     # <img src="@Image" alt="Mol" width="70%"><br>
     hover = HoverTool(
+        #                    @Image<br>
         tooltips=f"""
             <div>
                 <div>
-                    @Image<br>
+                    <img src="@Image" alt="Mol" /><br>
                 <div>
                 <div>
                     <span style="font-size: 12px; font-weight: bold;">@{id_col}</span>
@@ -71,16 +79,17 @@ def struct_hover(id_col, cols):
 
 
 @pn.depends(button)
-def show_result(event=None):    
+def show_result(event=None):
     def update_table(index):
         selected_df = mst.df.iloc[index].copy()
         selected_df = u.replace_nans(selected_df, sel_columns, "")
-        result[2] = pn.pane.DataFrame(selected_df[sel_columns], escape=False, index=False, max_width=1200)
+        result[2] = pn.pane.DataFrame(
+            selected_df[sel_columns], escape=False, index=False, max_width=1200
+        )
         sio = StringIO()
         selected_df[dl_columns].to_csv(sio, sep="\t", index=False)
         sio.seek(0)
-        result[3] = pnw.FileDownload(sio, embed=True, filename='selection.tsv')
-
+        result[3] = pnw.FileDownload(sio, embed=True, filename="selection.tsv")
 
     print("In function")
     print(w_file_input.filename)
@@ -89,26 +98,29 @@ def show_result(event=None):
         return pn.pane.Markdown(HELP_TEXT + "\n\nPlease upload a file.")
     df = pd.read_csv(BytesIO(w_file_input.value), sep="\t")
     print(len(df))
-    dl_columns = df.columns.tolist()    
+    dl_columns = df.columns.tolist()
     avail_cols = ", ".join(dl_columns)
     if w_id_col.value not in df.columns:
         return pn.pane.Markdown(
             (
-                HELP_TEXT + f"\n\n**ERROR:** Identifier column {w_id_col.value} not found in the file."
+                HELP_TEXT
+                + f"\n\n**ERROR:** Identifier column {w_id_col.value} not found in the file."
                 + f"\n\nAvailable columns: \n{avail_cols}"
             )
         )
     if w_act_col.value not in df.columns:
         return pn.pane.Markdown(
             (
-                HELP_TEXT + f"\n\n**ERROR:** Activity column {w_act_col.value} not found in the file."
+                HELP_TEXT
+                + f"\n\n**ERROR:** Activity column {w_act_col.value} not found in the file."
                 + f"\n\nAvailable columns: \n{avail_cols}"
             )
         )
     if "Smiles" not in df.columns:
         return pn.pane.Markdown(
             (
-                HELP_TEXT + "\n\n**ERROR:** Smiles column not found in the file."
+                HELP_TEXT
+                + "\n\n**ERROR:** Smiles column not found in the file."
                 + f"\n\nAvailable columns: \n{avail_cols}"
             )
         )
@@ -131,7 +143,8 @@ def show_result(event=None):
         if len(tmp) == 1:  # Interpret as Matplotlib colormap name
             if tmp[0] not in avail_cmaps:
                 return pn.pane.Markdown(
-                    HELP_TEXT + f"\n\n**ERROR:** Color map {tmp[0]} not found. Available color maps: {', '.join(avail_cmaps)}."
+                    HELP_TEXT
+                    + f"\n\n**ERROR:** Color map {tmp[0]} not found. Available color maps: {', '.join(avail_cmaps)}."
                 )
             print("Using colormap:", tmp[0])
             cmap = tmp[0]
@@ -142,27 +155,32 @@ def show_result(event=None):
                     x = "#" + x
                 if len(x) != 7:
                     return pn.pane.Markdown(
-                        HELP_TEXT + f"\n\n**ERROR:** Color value {x} does not match the HTML format (6 digits plus an optional leading '#')."
+                        HELP_TEXT
+                        + f"\n\n**ERROR:** Color value {x} does not match the HTML format (6 digits plus an optional leading '#')."
                     )
                 cmap.append(x)
         # print("Using manual color map:", cmap)
     else:
         cmap = w_cmap.value
-    
+
     mst = cmst.ClusterMST(
-        df, id_col=w_id_col.value, act_col=w_act_col.value, 
-        top_n_act=w_top_n_act.value, num_sim=w_num_sim.value, 
-        reverse=w_reverse.value, sim_cutoff=w_sim_cutoff.value,
-        fp=w_fp_method.value
+        df,
+        id_col=w_id_col.value,
+        act_col=w_act_col.value,
+        top_n_act=w_top_n_act.value,
+        num_sim=w_num_sim.value,
+        reverse=w_reverse.value,
+        sim_cutoff=w_sim_cutoff.value,
+        fp=w_fp_method.value,
     )
-    try: 
+    try:
         mst.calc_mst()
     except Exception as e:
-        return pn.pane.Markdown(
-            HELP_TEXT + f"\n\n**ERROR:** {str(e)}"
-        )
-    mst.df = u.calc_from_smiles(mst.df, "Image", mol_image_tag, smiles_col="Smiles")
-    
+        return pn.pane.Markdown(HELP_TEXT + f"\n\n**ERROR:** {str(e)}")
+    # mst.df = u.calc_from_smiles(mst.df, "Image", mol_image_tag, smiles_col="Smiles")
+    mst.df = u.calc_from_smiles(mst.df, "Image", mol_b64, smiles_col="Smiles")
+    print(mst.df.head())
+
     # Used for the display of selected table (the save action always saves all columns):
     sel_columns = ["Image", mst.id_col, mst.act_col]
     excl_from_display = set(sel_columns + ["InChIKey", "Smiles", "X", "Y"])
@@ -170,7 +188,10 @@ def show_result(event=None):
     sel_columns.extend(additional_columns)
 
     tooltip = [mst.act_col]
-    edges = [[(x1, y1), (x2, y2)] for (_, _, x1, y1, x2, y2) in mst.edges.to_records(index=False)]
+    edges = [
+        [(x1, y1), (x2, y2)]
+        for (_, _, x1, y1, x2, y2) in mst.edges.to_records(index=False)
+    ]
 
     hover = struct_hover(mst.id_col, cols=tooltip)
     plot_options = {
@@ -189,20 +210,19 @@ def show_result(event=None):
     scatter = hv.Points(data=mst.df, kdims=kdims, vdims=vdims)  # , label=title)
     plot_options["color"] = colorby
     plot_options["cmap"] = cmap
-    
+
     selection = Selection1D(source=scatter)
-    selection.param.watch(lambda event: update_table(event.new), 'index')
-    
+    selection.param.watch(lambda event: update_table(event.new), "index")
+
     # chart = (hv.Path(edges).options(color="black") * scatter.options(**plot_options))
     chart = hv.Path(edges).opts(color="black") * scatter.opts(**plot_options)
-    
+
     dsio = StringIO()
     ds_4_dl = mst.df.drop(columns=["X", "Y", "Image"]).copy()
     ds_4_dl.to_csv(dsio, sep="\t", index=False)
     dsio.seek(0)
     w_ds_dl = pnw.FileDownload(
-        dsio, embed=True, filename='dataset.tsv',
-        label="Download full dataset"
+        dsio, embed=True, filename="dataset.tsv", label="Download full dataset"
     )
 
     dswimgio = StringIO()
@@ -210,8 +230,10 @@ def show_result(event=None):
     ds_4_dl_w_img.to_csv(dswimgio, sep="\t", index=False)
     dswimgio.seek(0)
     w_ds_w_img_dl = pnw.FileDownload(
-        dswimgio, embed=True, filename='dataset_w_coord.tsv',
-        label="Download full dataset with coordinates"
+        dswimgio,
+        embed=True,
+        filename="dataset_w_coord.tsv",
+        label="Download full dataset with coordinates",
     )
 
     edgesio = StringIO()
@@ -219,13 +241,15 @@ def show_result(event=None):
     edges_4_dl.to_csv(edgesio, sep="\t", index=False)
     edgesio.seek(0)
     w_edges_dl = pnw.FileDownload(
-        edgesio, embed=True, filename='edges.tsv',
-        label="Download edges for full dataset"
+        edgesio,
+        embed=True,
+        filename="edges.tsv",
+        label="Download edges for full dataset",
     )
 
     result = pn.Column(
         chart,
-    	pn.Row(w_ds_dl, w_ds_w_img_dl, w_edges_dl),
+        pn.Row(w_ds_dl, w_ds_w_img_dl, w_edges_dl),
         pn.pane.Markdown("Select points in the chart using the lasso select tool."),
         pn.pane.Markdown(""),
     )
@@ -235,56 +259,74 @@ def show_result(event=None):
 
 title = "Cluster MST"
 w_file_input = pnw.FileInput(
-    accept='.tsv', multiple=False,
-    name="Upload a file", description="Select a file with structures and activity data."
+    accept=".tsv",
+    multiple=False,
+    name="Upload a file",
+    description="Select a file with structures and activity data.",
 )
 w_id_col = pnw.TextInput(
-    name="Identifier column", value="Compound_Id",
-    description="Name of the column containing the compound identifiers."
+    name="Identifier column",
+    value="Compound_Id",
+    description="Name of the column containing the compound identifiers.",
 )
 w_act_col = pnw.TextInput(
     name="Activity column",
-    description="Name of the column containing the activity values."
+    description="Name of the column containing the activity values.",
 )
 w_reverse = pnw.Checkbox(
     name="Reverse",
     # description="Check if lower values are better, e.g. for IC50."
 )
 w_top_n_act = pnw.IntInput(
-    name="Top N active", value=50,
-    description="Number of top active compounds to select."
+    name="Top N active",
+    value=50,
+    description="Number of top active compounds to select.",
 )
 w_num_sim = pnw.IntInput(
-    name="Number of similar compounds", value=10,
-    description="Number of similar compounds to select for each active compound."
+    name="Number of similar compounds",
+    value=10,
+    description="Number of similar compounds to select for each active compound.",
 )
 w_sim_cutoff = pnw.FloatInput(
-    name="Similarity cutoff", value=0.6,
-    start=0.2, end=0.9, step=0.1,
-    description="Minimum similarity cutoff."
+    name="Similarity cutoff",
+    value=0.6,
+    start=0.2,
+    end=0.9,
+    step=0.1,
+    description="Minimum similarity cutoff.",
 )
 w_fp_method = pnw.Select(
     name="Fingerprint method",
     options=sorted(cmst.FPDICT.keys()),
     value="ECFC4",
-    description="Fingerprint method to use for similarity calculation."
+    description="Fingerprint method to use for similarity calculation.",
 )
 w_cmap = pnw.Select(
     name="Color map",
     options=[
-        "brg", "bmy", "viridis", "plasma", "magma", "turbo", "gist_rainbow",
-        "colorblind", "category10", "dark2", "set1", "tab10", "tab20",
+        "brg",
+        "bmy",
+        "viridis",
+        "plasma",
+        "magma",
+        "turbo",
+        "gist_rainbow",
+        "colorblind",
+        "category10",
+        "dark2",
+        "set1",
+        "tab10",
+        "tab20",
         # manual cmaps:
         # "four"
     ],
     value="brg",
-    description="Color map for the plot."
+    description="Color map for the plot.",
 )
 w_manual_cmap = pnw.TextInput(
     name="Manual colormap (optional, comma-separated)",
-    description="Instead of using a pre-defined colormap, you can either give a list of comma-separated HTML color codes, here or the name of a holoviews colormap."
+    description="Instead of using a pre-defined colormap, you can either give a list of comma-separated HTML color codes, here or the name of a holoviews colormap.",
 )
-
 
 
 print("Starting...")
@@ -299,13 +341,12 @@ app = pn.template.FastListTemplate(
         w_act_col,
         w_reverse,
         w_top_n_act,
-        w_num_sim, 
+        w_num_sim,
         w_sim_cutoff,
         w_fp_method,
         w_cmap,
         w_manual_cmap,
-        
-        button
+        button,
     ],
     main=[
         pn.Column(
